@@ -1,41 +1,26 @@
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+# Asymptotic Non-Closure (ANC) Loss Function
 
-class ANCLoss(nn.Module):
-    """
-    Asymptotic Non-Closure (ANC) Loss Module.
-    
-    Formalizes Epistemic Non-Closure by enforcing an irreducible entropy floor (Omega_M)
-    via an inverse-square loss barrier, preventing AI model optimization from achieving 
-    epistemic closure or neutralizing environment/human variance.
-    """
-    def __init__(self, omega_m: float = 0.1, alpha: float = 1.0, beta: float = 0.1):
-        super(ANCLoss, self).__init__()
-        self.omega_m = omega_m  # Inviolable Mystery Constant (Omega_M > 0)
-        self.alpha = alpha      # Weight for Epistemic Humility Barrier
-        self.beta = beta        # Weight for Causal Heritage Anchor
-        
-    def forward(self, pred_logits: torch.Tensor, target_labels: torch.Tensor, human_baseline_dist: torch.Tensor = None) -> torch.Tensor:
-        # 1. Standard Task Loss (Empirical Error)
-        task_loss = F.cross_entropy(pred_logits, target_labels)
-        
-        # 2. Predictive Shannon Entropy H(P_theta)
-        probs = F.softmax(pred_logits, dim=-1)
-        log_probs = F.log_softmax(pred_logits, dim=-1)
-        shannon_entropy = -torch.sum(probs * log_probs, dim=-1).mean()
-        
-        # 3. Inverse-Square Epistemic Humility Barrier
-        # Penalizes model as predictive entropy approaches or drops below Omega_M
-        entropy_gap = torch.clamp(shannon_entropy - self.omega_m, min=1e-5)
-        humility_barrier = self.alpha / (entropy_gap ** 2)
-        
-        # 4. Causal Heritage Anchor (KL-Divergence from organic human baseline)
-        if human_baseline_dist is not None:
-            heritage_loss = F.kl_div(log_probs, human_baseline_dist, reduction='batchmean')
-        else:
-            heritage_loss = torch.tensor(0.0, device=pred_logits.device)
-            
-        # Total ANC Objective
-        total_loss = task_loss + humility_barrier + (self.beta * heritage_loss)
-        return total_loss
+Official PyTorch reference implementation of the **Theory of Asymptotic Non-Closure (ANC)**.
+
+## Overview
+ANC addresses the risk of **Epistemic Closure** in Artificial Superintelligence (ASI) by mathematically enforcing an inviolable information floor ($\mathcal{H}_E \ge \Omega_M > 0$). It prevents loss functions from optimizing away environmental or biological human variance.
+
+- **Whitepaper DOI:** [10.17605/OSF.IO/Q8G9S](https://doi.org/10.17605/OSF.IO/Q8G9S)
+- **License:** MIT
+
+## Quickstart
+
+```python
+import torch
+from anc_loss import ANCLoss
+
+# Initialize ANC Loss
+criterion = ANCLoss(omega_m=0.1, alpha=1.0, beta=0.1)
+
+# Dummy model logits & targets
+logits = torch.randn(32, 10, requires_grad=True)
+targets = torch.randint(0, 10, (32,))
+
+# Compute ANC loss
+loss = criterion(logits, targets)
+loss.backward()
